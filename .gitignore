@@ -60,3 +60,7 @@ data/*
 .cache/
 .DS_Store
 Thumbs.db
+
+# The built documentation PDF is tracked so the report can be read without a
+# LaTeX toolchain. Everything else latexmk produces stays out of git.
+!docs/build/Main.pdf
