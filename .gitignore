@@ -1,0 +1,62 @@
+# --- C++ / CMake ------------------------------------------------------------
+build/
+cmake-build-*/
+CMakeCache.txt
+CMakeFiles/
+CMakeUserPresets.json
+compile_commands.json
+install/
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.so.*
+*.dylib
+*.dll
+*.exe
+*.pdb
+*.ilk
+*.gcda
+*.gcno
+*.profraw
+*.profdata
+coverage/
+
+# --- LaTeX ------------------------------------------------------------------
+*.aux
+*.log
+*.out
+*.toc
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.nav
+*.snm
+*.run.xml
+
+# latexmk writes into docs/build. Everything there is regenerable from source,
+# so nothing from it is committed. When the report is finished and a specific
+# PDF has to be preserved, add an exception for that file, not for the folder.
+docs/build/
+docs/generated/
+
+# --- Measurement output -----------------------------------------------------
+# Raw timing runs are regenerable and machine specific. Only the aggregated
+# tables that the report cites are committed.
+results/raw/
+
+# --- Datasets ---------------------------------------------------------------
+# Large inputs are fetched, not stored.
+data/*
+!data/.gitkeep
+!data/README.md
+
+# --- Editors and OS ---------------------------------------------------------
+.vscode/
+.idea/
+.cache/
+.DS_Store
+Thumbs.db
