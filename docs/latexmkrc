@@ -1,0 +1,13 @@
+# pdfLaTeX, НЕ XeLaTeX. Форматът иска T2A + tempora, не fontspec.
+$pdf_mode = 1;
+$bibtex_use = 2;
+$out_dir = 'build';
+$clean_ext = 'bbl nav out snm synctex.gz run.xml';
+
+# latexmk пуска bibtex ВЪТРЕ в $out_dir, тоест текущата директория за него е build/,
+# а references.bib на проекта е един етаж по-нагоре. Без този ред kpathsea продължава
+# търсенето в дистрибуцията на TeX и намира съвсем друг файл със същото име
+# (проверено на тази машина: MiKTeX доставя references.bib в пакет за дисертации).
+# Резултатът е мълчалив: bibtex не съобщава грешка, просто нито едно цитиране не се
+# разрешава. Затова родителската директория се добавя изрично.
+ensure_path('BIBINPUTS', '..');
