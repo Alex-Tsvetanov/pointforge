@@ -1,5 +1,5 @@
 # --- C++ / CMake ------------------------------------------------------------
-build/
+build*/
 cmake-build-*/
 CMakeCache.txt
 CMakeFiles/
@@ -49,10 +49,8 @@ docs/generated/
 results/raw/
 
 # --- Datasets ---------------------------------------------------------------
-# Large inputs are fetched, not stored.
-data/*
-!data/.gitkeep
-!data/README.md
+# There are none. Every input the demo, the tests and the measurements need is
+# produced by the generator in src/synthetic.cpp from a seed.
 
 # --- Editors and OS ---------------------------------------------------------
 .vscode/
