@@ -18,7 +18,7 @@ manager, no network fetch at configure time, and no optional feature that quietl
 
 That constraint shapes three things in the source tree:
 
-- The test runner is 90 lines in `tests/test_framework.hpp` plus a `main`, registered with CTest.
+- The test runner is 118 lines in `tests/test_framework.hpp` plus a `main`, registered with CTest.
 - The timing harness is `std::chrono::steady_clock` in `include/pointforge/timing.hpp`.
 - The 3x3 singular value decomposition that ICP needs is a one-sided Jacobi in `src/transform.cpp`.
 
