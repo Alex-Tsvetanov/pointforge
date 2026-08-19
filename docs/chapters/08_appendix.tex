@@ -1,152 +1,42 @@
-% ПРИЛОЖЕНИЯ, без номер на раздел.
-% Изходен текст, формати на структури от данни и как се възпроизвеждат измерванията.
-\section*{ПРИЛОЖЕНИЯ}
+% ПРИЛОЖЕНИЕ, без номер на раздел.
+% Изходният текст НЕ се вмъква тук: адресът на хранилището върши същата работа.
+\section*{ПРИЛОЖЕНИЕ}
 \label{sec:appendix}
-\addcontentsline{toc}{section}{ПРИЛОЖЕНИЯ}
+\addcontentsline{toc}{section}{ПРИЛОЖЕНИЕ}
 
-\subsection*{Приложение А. Структура на изходния текст}
-
-\begin{verbatim}
-pointforge/
-  CMakeLists.txt        библиотека, демонстрация, измервания, проверки
-  include/pointforge/   публични типове
-    point_cloud.hpp       облак от точки, по компонента
-    transform.hpp         матрица 3x3, разлагане, кораво преобразувание
-    kdtree.hpp            интерфейс на индекса, двата пътя на обхождане
-    icp.hpp               съвместяване, точка към точка
-    voxel_grid.hpp        прореждане с вокселна решетка
-    cloud_io.hpp          PLY и PCD
-    image.hpp             Image8 и ImageF
-    image_io.hpp          PGM и PPM
-    image_ops.hpp         изглаждане, градиент, немаксимуми, прагове
-    labeling.hpp          свързани компоненти
-    synthetic.hpp         генератор на изкуствени данни
-    timing.hpp            измерване на време
-    text.hpp              подравняване на изхода
-  src/                  реализация, по един файл на модул
-  apps/demo.cpp         демонстрация: една команда, видим изход
-  benchmarks/bench.cpp  измервания, изход и в CSV
-  tests/                проверки: рамка и по един файл на група
-    test_framework.hpp    регистрация и твърдения
-    test_main.cpp         изпълнение и избор на група
-    test_geometry.cpp     разлагане, ротации, преобразувания
-    test_cloud_io.cpp     PLY и PCD, и повредени файлове
-    test_kdtree.cpp       индекс срещу изчерпателно търсене
-    test_voxel_grid.cpp   прореждане
-    test_icp.cpp          съвместяване срещу известно преобразувание
-    test_image.cpp        растерни стъпки и сегментация
-  results/              записаните изпълнения на измерванията
-  docs/                 този документ
-\end{verbatim}
-
-\subsection*{Приложение Б. Формати на структурите от данни}
-
-\textbf{Облак от точки.} Три отделни непрекъснати масива от \code{float}, по един на
-координата, всеки с дължина $n$. Заеманата памет е $12n$ байта плюс запасът на трите
-вектора. Достъпът до отделна точка събира тройката от трите масива.
-
-\textbf{Възел на дървото.} Полетата са дадени в Табл.~\ref{tab:node}. Общият размер е
-20 байта. Стойност $-1$ в полето за ос означава лист; тогава двата номера ограждат
-диапазона от точки в разбърканите масиви. Левият наследник е винаги следващият възел в
-масива, затова номер за него не се пази.
+Целият изходен текст, записаните изпълнения на измерванията в \code{results/} и този
+документ са в публичното хранилище \url{https://github.com/Alex-Tsvetanov/pointforge}.
+Табл.~\ref{tab:files} дава разпределението на кода; броят редове е за заглавния файл и
+реализацията взети заедно. Изгражда се с \code{cmake -S . -B build -DCMAKE\_BUILD\_TYPE=Release}
+и \code{cmake --build build}, след което \code{ctest --test-dir build} пуска проверките,
+целта \code{demo} произвежда изходните файлове, а \code{pointforge\_bench --csv <файл>}
+повтаря измерванията. Втората конфигурация се получава с
+\code{-DPOINTFORGE\_NATIVE\_ARCH=ON} и не е преносима, затова е изключена по подразбиране.
 
 \begin{table}[H]
 \centering
-\caption{Полета на възела на k-d дървото}
-\label{tab:node}
-\begin{tabular}{@{}L{3.2cm}L{3.1cm}rL{5.1cm}@{}}
+\caption{Модули на реализацията}
+\label{tab:files}
+\begin{tabular}{@{}L{4.4cm}rL{7.4cm}@{}}
 \toprule
-\textbf{Поле} & \textbf{Тип} & \textbf{Байта} & \textbf{Съдържание} \\
+\textbf{Файл} & \textbf{Редове} & \textbf{Съдържание} \\
 \midrule
-\code{split}       & \code{float}         & 4 & стойност на разделящата равнина \\
-\code{axis}        & \code{std::int32\_t} & 4 & 0, 1 или 2; $-1$ за лист \\
-\code{begin}       & \code{std::uint32\_t} & 4 & начало на диапазона в листа \\
-\code{end}         & \code{std::uint32\_t} & 4 & край на диапазона в листа \\
-\code{right\_child} & \code{std::uint32\_t} & 4 & номер на десния наследник \\
+\code{point\_cloud.hpp}        & 153 & облак от точки, разположен по компонента \\
+\code{transform.\{hpp,cpp\}}   & 305 & матрица 3x3, сингулярно разлагане, кораво преобразувание \\
+\code{kdtree.\{hpp,cpp\}}      & 605 & построяване, трите вида заявка, двата пътя на лист \\
+\code{icp.\{hpp,cpp\}}         & 257 & съответствия, отхвърляне, оценяване по Кабш \\
+\code{voxel\_grid.\{hpp,cpp\}} & 149 & прореждане с вокселна решетка \\
+\code{cloud\_io.\{hpp,cpp\}}   & 307 & четене и запис на PLY и PCD \\
+\code{image.\{hpp,cpp\}}       & 179 & двата растерни типа и преобразуванията между тях \\
+\code{image\_io.\{hpp,cpp\}}   & 163 & четене и запис на PGM и PPM \\
+\code{image\_ops.\{hpp,cpp\}}  & 238 & изглаждане, градиент, немаксимуми, прагове \\
+\code{labeling.\{hpp,cpp\}}    & 179 & свързани компоненти и описанията им \\
+\code{synthetic.\{hpp,cpp\}}   & 272 & генератор на изкуствени облаци и изображения \\
+\code{timing.hpp}              &  80 & измерване на време без външна библиотека \\
+\code{text.hpp}                &  37 & подравняване на изхода при кирилица \\
+\code{apps/demo.cpp}           & 256 & демонстрация: една команда, видим изход \\
+\code{benchmarks/bench.cpp}    & 417 & измервания, изход и във формат CSV \\
+\code{tests/}                  & 1\,163 & рамка и шест групи проверки, 60 случая \\
 \bottomrule
 \end{tabular}
 \end{table}
-
-Индексът пази освен възлите и три масива с разбърканите координати, плюс масив с
-първоначалните номера на точките. За милион точки при размер на листа 32 това дава
-65\,535 възела и 17,64 MiB общо, тоест 18,5 байта на точка (Табл.~\ref{tab:build}).
-
-\textbf{Растерни типове.} \code{Image8} пази 8 бита на канал, с 1 или 3 канала,
-преплетени по пиксел. \code{ImageF} пази по едно число с плаваща запетая на пиксел.
-Целият път от изглаждането до потискането на немаксимумите тече в \code{ImageF}, защото
-градиентите излизат извън диапазона 0..255 и закръгляването между стъпките би трупало
-грешка.
-
-\textbf{Ключ на вокселната решетка.} Един 64-битов ключ, в който трите индекса на кубчето
-заемат по 21 бита. Границата от $2^{21}$ кубчета на ос е проверена при изпълнение и
-надхвърлянето ѝ е грешка, не мълчаливо препълване.
-
-\subsection*{Приложение В. Избрани части от изходния текст}
-
-Листингите на скаларния и на пакетния път на обхождане, както и на оценяването на
-преобразуванието по Кабш, са в Раздел~\ref{sec:implementation}, съответно
-Листинг~\ref{lst:scalar}, Листинг~\ref{lst:batched} и Листинг~\ref{lst:kabsch}. Тук са
-дадени интерфейсът на индекса и измервателната част, вмъкнати направо от изходните
-файлове.
-
-\lstinputlisting[
-  caption={Интерфейс на пространствения индекс, \code{include/pointforge/kdtree.hpp}},
-  label={lst:kdtree-hpp}
-]{../include/pointforge/kdtree.hpp}
-
-\lstinputlisting[
-  caption={Измерване на време, \code{include/pointforge/timing.hpp}},
-  label={lst:timing-hpp}
-]{../include/pointforge/timing.hpp}
-
-\subsection*{Приложение Г. Как се възпроизвеждат измерванията}
-
-Инструментите и версиите им са в Табл.~\ref{tab:machine}. Командите по-долу са тези, с
-които са получени резултатите от Раздел~\ref{sec:results}, и са изпълнявани от корена на
-хранилището.
-
-Изграждане и проверка:
-
-\begin{verbatim}
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build
-ctest --test-dir build --output-on-failure
-\end{verbatim}
-
-Демонстрация. Записва три файла PLY и седем файла PGM и PPM в
-\code{build/demo-output/}:
-
-\begin{verbatim}
-cmake --build build --target demo
-\end{verbatim}
-
-Измервания в подразбиращата се конфигурация:
-
-\begin{verbatim}
-./build/pointforge_bench --csv results/measurements_baseline.csv
-\end{verbatim}
-
-Измервания с пълния набор инструкции на машината. Изгражданият файл не е преносим, затова
-настройката е изключена по подразбиране:
-
-\begin{verbatim}
-cmake -S . -B build-native -G Ninja -DCMAKE_BUILD_TYPE=Release \
-      -DPOINTFORGE_NATIVE_ARCH=ON
-cmake --build build-native
-./build-native/pointforge_bench --csv results/measurements_native.csv
-\end{verbatim}
-
-Проверка кои цикли компилаторът векторизира:
-
-\begin{verbatim}
-g++ -std=c++20 -O3 -Iinclude -c src/kdtree.cpp \
-    -o /dev/null -fopt-info-vec
-g++ -std=c++20 -O3 -march=native -Iinclude -c src/kdtree.cpp \
-    -o /dev/null -fopt-info-vec
-\end{verbatim}
-
-Изграждане на този документ:
-
-\begin{verbatim}
-cd docs && latexmk -pdf Main.tex
-\end{verbatim}
