@@ -128,17 +128,21 @@ The harness reports the minimum of the repetitions as the headline figure, with 
 spread beside it. On a machine with background load the median moves and the minimum does not, and
 the spread column is what tells you which case you are in. The recorded runs are in `results/`.
 
-`measurements_baseline.csv` and `measurements_native.csv` are the exhibit timings: scalar versus
-batched on the author's Windows machine (Ryzen 5 3600). Those are the numbers cited in the
-Bulgarian report tables.
+`measurements_baseline.csv` and `measurements_native.csv` are the exhibit timings for the
+scalar-versus-batched tables in the Bulgarian report (author's Windows machine, Ryzen 5 3600).
 
-Files under `results/cloud-vm/` (`measurements_simd.csv`, `measurements_simd_native.csv`, and
-the matching `.txt` logs) were produced on a Cursor cloud Linux VM. They are development
-artefacts only and must not be cited as report numbers. SIMD / xsimd leaf-scan speedups on the
-author's Windows machine are still unmeasured; the report marks them with `\TODO`. Full-tree
-queries do not support a speedup claim either. Assembler evidence for the xsimd leaf fill is in
-`results/compiler_simd_report.txt`. GCC's auto-vectoriser report for the non-xsimd remainder loop
-is in `results/auto_vec_opt_info.txt`.
+`results/measurements_simd.csv` is the three-path run on the same machine (`hostname`
+`alex-pc`, 2026-08-30, g++ 15.2.0, Release, no `-march=native`, `simd_available=1`, xsimd).
+Isolated leaf-scan shows a scalar/SIMD ratio up to 2.048260 (`k=1`, leaf 8192). Full-tree kNN
+does not: ratios stay near 1, and at `n=1000000`, `k=1` SIMD is slower than scalar
+(`scalar_over_simd=0.943935`). The largest recorded spread in that file is 26.702212%
+(batched, `k=8`, `n=1000000`). Machine notes for that run are in
+`docs/measurements/report.txt`.
+
+Files under `results/cloud-vm/` were produced on a Cursor cloud Linux VM. They are development
+artefacts only and must not be cited as report numbers. Assembler evidence for the xsimd leaf
+fill is in `results/compiler_simd_report.txt`. GCC's auto-vectoriser report for the non-xsimd
+remainder loop is in `results/auto_vec_opt_info.txt`.
 
 To measure with the full instruction set of the build machine:
 
@@ -175,8 +179,8 @@ toolchain. Unfilled facts are marked with `\TODO{...}` and are found with
 - [x] Binary PGM and PPM reader and writer
 - [x] Voxel grid downsampling
 - [x] k-d tree with kNN, radius search and single nearest
-- [x] Scalar, batched and xsimd leaf scan (correctness tested; Windows SIMD timing TODO)
-- [x] Exhibit timings: scalar vs batched on Windows (`measurements_baseline` / `_native`)
+- [x] Scalar, batched and xsimd leaf scan (correctness tested; alex-pc timings in `measurements_simd.csv`)
+- [x] Exhibit timings: scalar vs batched on Windows (`measurements_baseline` / `_native`); three-path SIMD on same host (`measurements_simd.csv`)
 - [x] Point-to-point ICP with SVD-based transform estimation
 - [x] Gaussian blur, Sobel, non-maximum suppression, hysteresis
 - [x] Connected component labelling
