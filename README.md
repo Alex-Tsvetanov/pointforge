@@ -131,8 +131,9 @@ the spread column is what tells you which case you are in. The recorded runs are
 `measurements_baseline.csv` and `measurements_native.csv` are the exhibit timings for the
 scalar-versus-batched tables in the Bulgarian report (author's Windows machine, Ryzen 5 3600).
 
-`results/measurements_simd.csv` is the three-path run on the same machine (`hostname`
-`alex-pc`, 2026-08-30, g++ 15.2.0, Release, no `-march=native`, `simd_available=1`, xsimd).
+`results/measurements_simd.csv` is the three-path run on the same Windows 11 Pro N /
+Ryzen 5 3600 machine (2026-08-30, g++ 15.2.0 MinGW-Builds, Release, no `-march=native`,
+`simd_available=1`, xsimd).
 Isolated leaf-scan shows a scalar/SIMD ratio up to 2.048260 (`k=1`, leaf 8192). Full-tree kNN
 does not: ratios stay near 1, and at `n=1000000`, `k=1` SIMD is slower than scalar
 (`scalar_over_simd=0.943935`). The largest recorded spread in that file is 26.702212%
@@ -179,8 +180,8 @@ toolchain. Unfilled facts are marked with `\TODO{...}` and are found with
 - [x] Binary PGM and PPM reader and writer
 - [x] Voxel grid downsampling
 - [x] k-d tree with kNN, radius search and single nearest
-- [x] Scalar, batched and xsimd leaf scan (correctness tested; alex-pc timings in `measurements_simd.csv`)
-- [x] Exhibit timings: scalar vs batched on Windows (`measurements_baseline` / `_native`); three-path SIMD on same host (`measurements_simd.csv`)
+- [x] Scalar, batched and xsimd leaf scan (correctness tested; exhibit timings in `measurements_simd.csv`)
+- [x] Exhibit timings: scalar vs batched on Windows (`measurements_baseline` / `_native`); three-path SIMD on same machine (`measurements_simd.csv`)
 - [x] Point-to-point ICP with SVD-based transform estimation
 - [x] Gaussian blur, Sobel, non-maximum suppression, hysteresis
 - [x] Connected component labelling

@@ -1,9 +1,9 @@
-PointForge SIMD measurements — alex-pc — 2026-08-30
+PointForge SIMD measurements — 2026-08-30
 
 Machine
-  hostname: alex-pc
-  OS: Microsoft Windows 11 Pro N, OsVersion 10.0.26200
-  CPU: AMD Ryzen 5 3600 6-Core Processor, 12 logical processors
+  OS: Microsoft Windows 11 Pro N, version 10.0.26200
+  CPU: AMD Ryzen 5 3600 6-Core Processor
+  threads: 12 logical processors
 
 Toolchain
   g++ 15.2.0 (x86_64-posix-seh-rev0, MinGW-Builds)

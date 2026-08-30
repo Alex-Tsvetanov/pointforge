@@ -8,7 +8,7 @@ numbers and must not appear in the Bulgarian results tables.
 
 Exhibit / report timings live in:
 
-- `results/measurements_baseline.csv` / `.txt` (Windows, Ryzen 5 3600)
-- `results/measurements_native.csv` / `.txt` (same Windows machine, `-march=native`)
-- `results/measurements_simd.csv` (same Windows machine, alex-pc, 2026-08-30, three paths;
-  notes in `docs/measurements/report.txt`)
+- `results/measurements_baseline.csv` / `.txt` (Windows 11 Pro N / Ryzen 5 3600)
+- `results/measurements_native.csv` / `.txt` (same machine, `-march=native`)
+- `results/measurements_simd.csv` (exhibit CSV: Windows 11 Pro N / Ryzen 5 3600 run,
+  2026-08-30, three paths; notes in `docs/measurements/report.txt`)
