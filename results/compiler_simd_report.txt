@@ -1,0 +1,71 @@
+PointForge SIMD leaf-scan compiler evidence
+Generated from: objdump -d on Release build of src/kdtree.cpp.o
+Compiler: g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+Flags: -O3 -std=c++20 (CMAKE_BUILD_TYPE=Release, no -march=native)
+simd_leaf_scan_available(): 1
+Intrinsics path: SSE2 (__SSE2__), 4 floats per xmm register
+
+The following instructions come from fill_block_distances when use_simd is true
+and n == kBlockSize. They are emitted from <emmintrin.h> builtins, not from
+auto-vectorisation of a scalar loop.
+
+0000000000000020 <_ZN10pointforge12_GLOBAL__N_120fill_block_distancesEPKfS2_S2_fffPfjb>:
+      23:	movaps %xmm0,%xmm5
+      2d:	jne    f0 <_ZN10pointforge12_GLOBAL__N_120fill_block_distancesEPKfS2_S2_fffPfjb+0xd0>
+      36:	je     f0 <_ZN10pointforge12_GLOBAL__N_120fill_block_distancesEPKfS2_S2_fffPfjb+0xd0>
+      3c:	movups (%rdi),%xmm4
+      3f:	movups (%rsi),%xmm0
+      42:	shufps $0x0,%xmm1,%xmm1
+      46:	shufps $0x0,%xmm5,%xmm5
+      4a:	movups (%r10),%xmm3
+      4e:	shufps $0x0,%xmm2,%xmm2
+      52:	subps  %xmm1,%xmm0
+      55:	subps  %xmm5,%xmm4
+      58:	subps  %xmm2,%xmm3
+      5b:	mulps  %xmm4,%xmm4
+      5e:	mulps  %xmm0,%xmm0
+      61:	mulps  %xmm3,%xmm3
+      64:	addps  %xmm4,%xmm0
+      67:	addps  %xmm3,%xmm0
+      6a:	movups %xmm0,(%rcx)
+      6d:	movups 0x10(%rdi),%xmm0
+      71:	movups 0x10(%rsi),%xmm4
+      75:	movups 0x10(%r10),%xmm3
+      7a:	subps  %xmm1,%xmm4
+      7d:	subps  %xmm5,%xmm0
+      80:	subps  %xmm2,%xmm3
+      83:	mulps  %xmm4,%xmm4
+      86:	mulps  %xmm0,%xmm0
+      89:	mulps  %xmm3,%xmm3
+      8c:	addps  %xmm4,%xmm0
+      8f:	addps  %xmm3,%xmm0
+      92:	movups %xmm0,0x10(%rcx)
+      96:	movups 0x20(%rdi),%xmm4
+      9a:	movups 0x20(%rsi),%xmm0
+      9e:	movups 0x20(%r10),%xmm3
+      a3:	subps  %xmm1,%xmm0
+      a6:	subps  %xmm5,%xmm4
+      a9:	subps  %xmm2,%xmm3
+      ac:	mulps  %xmm0,%xmm0
+      af:	mulps  %xmm4,%xmm4
+      b2:	mulps  %xmm3,%xmm3
+      b5:	addps  %xmm4,%xmm0
+      b8:	addps  %xmm3,%xmm0
+      bb:	movups %xmm0,0x20(%rcx)
+      bf:	movups 0x30(%rdi),%xmm3
+      c3:	movups 0x30(%rsi),%xmm0
+      c7:	subps  %xmm5,%xmm3
+      ca:	subps  %xmm1,%xmm0
+      cd:	movups 0x30(%r10),%xmm1
+      d2:	subps  %xmm2,%xmm1
+      d5:	mulps  %xmm0,%xmm0
+      d8:	mulps  %xmm3,%xmm3
+      db:	mulps  %xmm1,%xmm1
+      de:	addps  %xmm3,%xmm0
+      e1:	addps  %xmm1,%xmm0
+      e4:	movups %xmm0,0x30(%rcx)
+      e8:	ret
+      f3:	je     2a0 <_ZN10pointforge12_GLOBAL__N_120fill_block_distancesEPKfS2_S2_fffPfjb+0x280>
+      fd:	je     250 <_ZN10pointforge12_GLOBAL__N_120fill_block_distancesEPKfS2_S2_fffPfjb+0x230>
+     127:	je     250 <_ZN10pointforge12_GLOBAL__N_120fill_block_distancesEPKfS2_S2_fffPfjb+0x230>
+     13b:	jbe    250 <_ZN10pointforge12_GLOBAL__N_120fill_block_distancesEPKfS2_S2_fffPfjb+0x230>

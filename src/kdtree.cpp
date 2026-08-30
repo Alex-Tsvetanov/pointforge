@@ -4,7 +4,24 @@
 #include <cmath>
 #include <numeric>
 
+#if defined(__AVX__)
+#include <immintrin.h>
+#define POINTFORGE_SIMD_AVX 1
+#elif defined(__SSE2__)
+#include <emmintrin.h>
+#define POINTFORGE_SIMD_SSE2 1
+#endif
+
 namespace pointforge {
+
+bool simd_leaf_scan_available() noexcept {
+#if defined(POINTFORGE_SIMD_AVX) || defined(POINTFORGE_SIMD_SSE2)
+    return true;
+#else
+    return false;
+#endif
+}
+
 namespace {
 
 // Купчина с най-лошия елемент отгоре, ограничена до k елемента. Държи се в
@@ -162,17 +179,61 @@ void scan_leaf_scalar(const LeafScanContext& c, std::uint32_t begin, std::uint32
 }
 // LISTING_END scan_leaf_scalar
 
+// Пълни distances[0..n) със squared distance. При n == kBlockSize и наличен
+// SSE2/AVX пътят ползва вградени функции; иначе същият скаларен цикъл като
+// пакетния път. Няма външна библиотека: само заглавните файлове на компилатора.
+void fill_block_distances(const float* bx, const float* by, const float* bz, float qx, float qy,
+                          float qz, float* distances, std::uint32_t n, bool use_simd) {
+    if (use_simd && n == KdTree::kBlockSize) {
+#if defined(POINTFORGE_SIMD_AVX)
+        const __m256 vqx = _mm256_set1_ps(qx);
+        const __m256 vqy = _mm256_set1_ps(qy);
+        const __m256 vqz = _mm256_set1_ps(qz);
+        for (std::uint32_t j = 0; j < KdTree::kBlockSize; j += 8) {
+            const __m256 dx = _mm256_sub_ps(_mm256_loadu_ps(bx + j), vqx);
+            const __m256 dy = _mm256_sub_ps(_mm256_loadu_ps(by + j), vqy);
+            const __m256 dz = _mm256_sub_ps(_mm256_loadu_ps(bz + j), vqz);
+            const __m256 d2 =
+                _mm256_add_ps(_mm256_add_ps(_mm256_mul_ps(dx, dx), _mm256_mul_ps(dy, dy)),
+                              _mm256_mul_ps(dz, dz));
+            _mm256_storeu_ps(distances + j, d2);
+        }
+        return;
+#elif defined(POINTFORGE_SIMD_SSE2)
+        const __m128 vqx = _mm_set1_ps(qx);
+        const __m128 vqy = _mm_set1_ps(qy);
+        const __m128 vqz = _mm_set1_ps(qz);
+        for (std::uint32_t j = 0; j < KdTree::kBlockSize; j += 4) {
+            const __m128 dx = _mm_sub_ps(_mm_loadu_ps(bx + j), vqx);
+            const __m128 dy = _mm_sub_ps(_mm_loadu_ps(by + j), vqy);
+            const __m128 dz = _mm_sub_ps(_mm_loadu_ps(bz + j), vqz);
+            const __m128 d2 =
+                _mm_add_ps(_mm_add_ps(_mm_mul_ps(dx, dx), _mm_mul_ps(dy, dy)), _mm_mul_ps(dz, dz));
+            _mm_storeu_ps(distances + j, d2);
+        }
+        return;
+#endif
+    }
+
+    for (std::uint32_t j = 0; j < n; ++j) {
+        const float dx = bx[j] - qx;
+        const float dy = by[j] - qy;
+        const float dz = bz[j] - qz;
+        distances[j] = dx * dx + dy * dy + dz * dz;
+    }
+}
+
 // Пакетен път. Разстоянията за целия блок се смятат в цикъл без разклонения и
-// без обръщение към купчината, така че компилаторът може да го векторизира:
-// трите четения са последователни, броят на итерациите е константа при пълен
-// блок, и няма зависимост между итерациите.
+// без обръщение към купчината. Това е формата, която компилаторът може да
+// векторизира сам; отделният SIMD път по-долу прави същото с явни вградени
+// функции, за да не се разчита на отчета на компилатора.
 //
 // Обновяването на купчината е втори цикъл. Преди него блокът се отхвърля
 // изцяло, ако и най-близката му точка е по-далече от най-лошата приета, което
 // при пълна купчина спестява повечето обръщения към нея.
 // LISTING_BEGIN scan_leaf_batched
 void scan_leaf_batched(const LeafScanContext& c, std::uint32_t begin, std::uint32_t end,
-                       BoundedHeap& heap) {
+                       BoundedHeap& heap, bool use_simd) {
     float distances[KdTree::kBlockSize];
 
     for (std::uint32_t base = begin; base < end; base += KdTree::kBlockSize) {
@@ -181,21 +242,7 @@ void scan_leaf_batched(const LeafScanContext& c, std::uint32_t begin, std::uint3
         const float* by = c.py + base;
         const float* bz = c.pz + base;
 
-        if (n == KdTree::kBlockSize) {
-            for (std::uint32_t j = 0; j < KdTree::kBlockSize; ++j) {
-                const float dx = bx[j] - c.qx;
-                const float dy = by[j] - c.qy;
-                const float dz = bz[j] - c.qz;
-                distances[j] = dx * dx + dy * dy + dz * dz;
-            }
-        } else {
-            for (std::uint32_t j = 0; j < n; ++j) {
-                const float dx = bx[j] - c.qx;
-                const float dy = by[j] - c.qy;
-                const float dz = bz[j] - c.qz;
-                distances[j] = dx * dx + dy * dy + dz * dz;
-            }
-        }
+        fill_block_distances(bx, by, bz, c.qx, c.qy, c.qz, distances, n, use_simd);
 
         if (heap.full()) {
             float block_min = distances[0];
@@ -204,7 +251,9 @@ void scan_leaf_batched(const LeafScanContext& c, std::uint32_t begin, std::uint3
         }
 
         for (std::uint32_t j = 0; j < n; ++j) {
-            if (distances[j] < heap.worst() || !heap.full()) heap.offer(c.original[base + j], distances[j]);
+            if (distances[j] < heap.worst() || !heap.full()) {
+                heap.offer(c.original[base + j], distances[j]);
+            }
         }
     }
 }
@@ -222,34 +271,34 @@ void collect_leaf_scalar(const LeafScanContext& c, std::uint32_t begin, std::uin
 }
 
 void collect_leaf_batched(const LeafScanContext& c, std::uint32_t begin, std::uint32_t end,
-                          float radius2, std::vector<Neighbor>& out) {
+                          float radius2, std::vector<Neighbor>& out, bool use_simd) {
     float distances[KdTree::kBlockSize];
 
     for (std::uint32_t base = begin; base < end; base += KdTree::kBlockSize) {
         const std::uint32_t n = std::min<std::uint32_t>(KdTree::kBlockSize, end - base);
-        const float* bx = c.px + base;
-        const float* by = c.py + base;
-        const float* bz = c.pz + base;
-
-        if (n == KdTree::kBlockSize) {
-            for (std::uint32_t j = 0; j < KdTree::kBlockSize; ++j) {
-                const float dx = bx[j] - c.qx;
-                const float dy = by[j] - c.qy;
-                const float dz = bz[j] - c.qz;
-                distances[j] = dx * dx + dy * dy + dz * dz;
-            }
-        } else {
-            for (std::uint32_t j = 0; j < n; ++j) {
-                const float dx = bx[j] - c.qx;
-                const float dy = by[j] - c.qy;
-                const float dz = bz[j] - c.qz;
-                distances[j] = dx * dx + dy * dy + dz * dz;
-            }
-        }
-
+        fill_block_distances(c.px + base, c.py + base, c.pz + base, c.qx, c.qy, c.qz, distances, n,
+                             use_simd);
         for (std::uint32_t j = 0; j < n; ++j) {
             if (distances[j] <= radius2) out.push_back({c.original[base + j], distances[j]});
         }
+    }
+}
+
+void dispatch_leaf_knn(const LeafScanContext& c, std::uint32_t begin, std::uint32_t end,
+                       BoundedHeap& heap, NnPath path) {
+    if (path == NnPath::Scalar) {
+        scan_leaf_scalar(c, begin, end, heap);
+    } else {
+        scan_leaf_batched(c, begin, end, heap, path == NnPath::Simd);
+    }
+}
+
+void dispatch_leaf_radius(const LeafScanContext& c, std::uint32_t begin, std::uint32_t end,
+                          float radius2, std::vector<Neighbor>& out, NnPath path) {
+    if (path == NnPath::Scalar) {
+        collect_leaf_scalar(c, begin, end, radius2, out);
+    } else {
+        collect_leaf_batched(c, begin, end, radius2, out, path == NnPath::Simd);
     }
 }
 
@@ -296,11 +345,7 @@ void KdTree::knn(const Point3& query, std::size_t k, std::vector<Neighbor>& out,
         while (true) {
             const Node& node = nodes_[node_index];
             if (node.axis < 0) {
-                if (path == NnPath::Scalar) {
-                    scan_leaf_scalar(ctx, node.begin, node.end, heap);
-                } else {
-                    scan_leaf_batched(ctx, node.begin, node.end, heap);
-                }
+                dispatch_leaf_knn(ctx, node.begin, node.end, heap, path);
                 break;
             }
 
@@ -365,26 +410,11 @@ bool KdTree::nearest(const Point3& query, Neighbor& out, NnPath path) const {
                         }
                     }
                 } else {
+                    const bool use_simd = path == NnPath::Simd;
                     for (std::uint32_t base = node.begin; base < node.end; base += kBlockSize) {
                         const std::uint32_t n = std::min<std::uint32_t>(kBlockSize, node.end - base);
-                        const float* bx = px_.data() + base;
-                        const float* by = py_.data() + base;
-                        const float* bz = pz_.data() + base;
-                        if (n == kBlockSize) {
-                            for (std::uint32_t j = 0; j < kBlockSize; ++j) {
-                                const float dx = bx[j] - qx;
-                                const float dy = by[j] - qy;
-                                const float dz = bz[j] - qz;
-                                distances[j] = dx * dx + dy * dy + dz * dz;
-                            }
-                        } else {
-                            for (std::uint32_t j = 0; j < n; ++j) {
-                                const float dx = bx[j] - qx;
-                                const float dy = by[j] - qy;
-                                const float dz = bz[j] - qz;
-                                distances[j] = dx * dx + dy * dy + dz * dz;
-                            }
-                        }
+                        fill_block_distances(px_.data() + base, py_.data() + base, pz_.data() + base,
+                                             qx, qy, qz, distances, n, use_simd);
                         for (std::uint32_t j = 0; j < n; ++j) {
                             if (distances[j] < best) {
                                 best = distances[j];
@@ -434,11 +464,7 @@ void KdTree::radius_search(const Point3& query, float radius, std::vector<Neighb
         while (true) {
             const Node& node = nodes_[node_index];
             if (node.axis < 0) {
-                if (path == NnPath::Scalar) {
-                    collect_leaf_scalar(ctx, node.begin, node.end, radius2, out);
-                } else {
-                    collect_leaf_batched(ctx, node.begin, node.end, radius2, out);
-                }
+                dispatch_leaf_radius(ctx, node.begin, node.end, radius2, out, path);
                 break;
             }
 

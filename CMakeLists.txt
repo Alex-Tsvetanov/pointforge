@@ -39,9 +39,9 @@ else()
     if(POINTFORGE_NATIVE_ARCH)
         target_compile_options(pointforge_flags INTERFACE -march=native)
     endif()
-    # Векторизацията на пакетния път зависи от -O3: при -O2 GCC не разгъва
-    # цикъла на блока. Флагът се добавя само за Release, за да не се
-    # оптимизира кодът, който се дебъгва.
+    # -O3 за Release: пакетният път е написан за векторизация, а SIMD пътят
+    # ползва вградени функции; при -O2 GCC често не разгъва блок от константна
+    # дължина. Флагът е само за Release, за да не се оптимизира дебъгът.
     target_compile_options(pointforge_flags INTERFACE $<$<CONFIG:Release>:-O3>)
 endif()
 

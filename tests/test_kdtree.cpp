@@ -70,7 +70,7 @@ PF_TEST(kdtree, knn_agrees_with_exhaustive_search) {
     }
 }
 
-PF_TEST(kdtree, scalar_and_batched_paths_agree) {
+PF_TEST(kdtree, scalar_batched_and_simd_paths_agree) {
     const PointCloud cloud = random_cloud(3000, 13U);
     const KdTree tree(cloud, KdTreeOptions{40});
     const PointCloud queries = random_cloud(60, 21U, 11.0F);
@@ -80,17 +80,24 @@ PF_TEST(kdtree, scalar_and_batched_paths_agree) {
 
         const std::vector<Neighbor> scalar = tree.knn(query, 16, NnPath::Scalar);
         const std::vector<Neighbor> batched = tree.knn(query, 16, NnPath::Batched);
+        const std::vector<Neighbor> simd = tree.knn(query, 16, NnPath::Simd);
         check_same_distances(scalar, batched, 0.0F);
+        check_same_distances(scalar, simd, 0.0F);
 
         const std::vector<Neighbor> radius_scalar = tree.radius_search(query, 2.0F, NnPath::Scalar);
         const std::vector<Neighbor> radius_batched = tree.radius_search(query, 2.0F, NnPath::Batched);
+        const std::vector<Neighbor> radius_simd = tree.radius_search(query, 2.0F, NnPath::Simd);
         PF_CHECK_EQ(indices_of(radius_scalar), indices_of(radius_batched));
+        PF_CHECK_EQ(indices_of(radius_scalar), indices_of(radius_simd));
 
         Neighbor near_scalar;
         Neighbor near_batched;
+        Neighbor near_simd;
         PF_CHECK(tree.nearest(query, near_scalar, NnPath::Scalar));
         PF_CHECK(tree.nearest(query, near_batched, NnPath::Batched));
+        PF_CHECK(tree.nearest(query, near_simd, NnPath::Simd));
         PF_CHECK_NEAR(near_scalar.squared_distance, near_batched.squared_distance, 0.0);
+        PF_CHECK_NEAR(near_scalar.squared_distance, near_simd.squared_distance, 0.0);
     }
 }
 
