@@ -1,14 +1,14 @@
 GCC -fopt-info-vec-optimized for src/kdtree.cpp (Release -O3, no -march=native)
 Compiler: g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
-This report is for the scalar/batched C++ loops. The explicit SIMD path
-uses intrinsics and therefore does not appear here as 'loop vectorized'.
+xsimd 13.2.0 vendored. The explicit SIMD path uses xsimd::batch and does not
+appear here as 'loop vectorized'; this report covers residual scalar loops.
 
-/workspace/src/kdtree.cpp:218:33: optimized: loop vectorized using 16 byte vectors
-/workspace/src/kdtree.cpp:218:33: optimized:  loop versioned for vectorization because of possible aliasing
-/workspace/src/kdtree.cpp:218:33: optimized: loop vectorized using 8 byte vectors
-/workspace/src/kdtree.cpp:106:20: optimized: basic block part vectorized using 16 byte vectors
-/workspace/src/kdtree.cpp:106:20: optimized: basic block part vectorized using 16 byte vectors
-/workspace/src/kdtree.cpp:106:20: optimized: basic block part vectorized using 16 byte vectors
+/workspace/src/kdtree.cpp:208:33: optimized: loop vectorized using 16 byte vectors
+/workspace/src/kdtree.cpp:208:33: optimized:  loop versioned for vectorization because of possible aliasing
+/workspace/src/kdtree.cpp:208:33: optimized: loop vectorized using 8 byte vectors
+/workspace/src/kdtree.cpp:105:20: optimized: basic block part vectorized using 16 byte vectors
+/workspace/src/kdtree.cpp:105:20: optimized: basic block part vectorized using 16 byte vectors
+/workspace/src/kdtree.cpp:105:20: optimized: basic block part vectorized using 16 byte vectors
 /usr/include/c++/13/bits/stl_numeric.h:97:22: optimized: loop vectorized using 16 byte vectors
 /usr/include/c++/13/bits/stl_vector.h:398:25: optimized: basic block part vectorized using 16 byte vectors
 /usr/include/c++/13/bits/stl_vector.h:398:25: optimized: basic block part vectorized using 16 byte vectors

@@ -75,6 +75,12 @@ PF_TEST(kdtree, scalar_batched_and_simd_paths_agree) {
     const KdTree tree(cloud, KdTreeOptions{40});
     const PointCloud queries = random_cloud(60, 21U, 11.0F);
 
+    // Пакетният път прави същите float операции като скаларния, само групирани.
+    // SIMD пътят минава през xsimd::fma, което на архитектури с FMA дава
+    // различен ред на закръгляне; допускът е няколко единици в последната
+    // значеща цифра, не нула.
+    constexpr float kSimdDistanceTol = 1e-5F;
+
     for (std::size_t q = 0; q < queries.size(); ++q) {
         const Point3 query = queries.point(q);
 
@@ -82,7 +88,7 @@ PF_TEST(kdtree, scalar_batched_and_simd_paths_agree) {
         const std::vector<Neighbor> batched = tree.knn(query, 16, NnPath::Batched);
         const std::vector<Neighbor> simd = tree.knn(query, 16, NnPath::Simd);
         check_same_distances(scalar, batched, 0.0F);
-        check_same_distances(scalar, simd, 0.0F);
+        check_same_distances(scalar, simd, kSimdDistanceTol);
 
         const std::vector<Neighbor> radius_scalar = tree.radius_search(query, 2.0F, NnPath::Scalar);
         const std::vector<Neighbor> radius_batched = tree.radius_search(query, 2.0F, NnPath::Batched);
@@ -97,7 +103,7 @@ PF_TEST(kdtree, scalar_batched_and_simd_paths_agree) {
         PF_CHECK(tree.nearest(query, near_batched, NnPath::Batched));
         PF_CHECK(tree.nearest(query, near_simd, NnPath::Simd));
         PF_CHECK_NEAR(near_scalar.squared_distance, near_batched.squared_distance, 0.0);
-        PF_CHECK_NEAR(near_scalar.squared_distance, near_simd.squared_distance, 0.0);
+        PF_CHECK_NEAR(near_scalar.squared_distance, near_simd.squared_distance, kSimdDistanceTol);
     }
 }
 

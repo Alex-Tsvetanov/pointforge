@@ -6,10 +6,9 @@ project(PointForge
         LANGUAGES CXX)
 
 # ---------------------------------------------------------------------------
-# Проектът се изгражда с компилатор за C++20 и с CMake, и с нищо друго.
-# Няма извличане на пакети при конфигуриране и няма задължителна външна
-# зависимост. Причината е практическа: хранилище, което изисква мениджър на
-# пакети, за да се компилира, на практика не се компилира от никого.
+# Изграждане с C++20 и CMake. Единствената външна зависимост е xsimd и е
+# вградена в third_party/xsimd (само заглавки). Няма FetchContent и няма
+# мрежов достъп при конфигуриране.
 # ---------------------------------------------------------------------------
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -39,9 +38,8 @@ else()
     if(POINTFORGE_NATIVE_ARCH)
         target_compile_options(pointforge_flags INTERFACE -march=native)
     endif()
-    # -O3 за Release: пакетният път е написан за векторизация, а SIMD пътят
-    # ползва вградени функции; при -O2 GCC често не разгъва блок от константна
-    # дължина. Флагът е само за Release, за да не се оптимизира дебъгът.
+    # -O3 за Release: пакетният път е написан за векторизация; при -O2 GCC често
+    # не разгъва блок от константна дължина. Флагът е само за Release.
     target_compile_options(pointforge_flags INTERFACE $<$<CONFIG:Release>:-O3>)
 endif()
 
@@ -54,6 +52,11 @@ endif()
 if(MINGW)
     target_link_options(pointforge_flags INTERFACE -static-libstdc++ -static-libgcc)
 endif()
+
+# xsimd: header-only, вендорирана в third_party/. Не се извлича при configure.
+add_library(pointforge_xsimd INTERFACE)
+target_include_directories(pointforge_xsimd INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/third_party/xsimd/include>)
 
 add_library(pointforge
     src/transform.cpp
@@ -69,7 +72,7 @@ add_library(pointforge
 )
 target_include_directories(pointforge PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
-target_link_libraries(pointforge PRIVATE pointforge_flags)
+target_link_libraries(pointforge PRIVATE pointforge_flags pointforge_xsimd)
 add_library(PointForge::pointforge ALIAS pointforge)
 
 # ---------------------------------------------------------------------------

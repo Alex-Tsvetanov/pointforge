@@ -100,10 +100,11 @@ int main(int argc, char** argv) {
     std::printf("неизвестен\n");
 #endif
     std::printf("SIMD път на тази компилация: %s\n",
-                simd_leaf_scan_available() ? "наличен (SSE2 или AVX)" : "липсва, равен на пакетния");
+                simd_leaf_scan_available() ? "наличен (xsimd)" : "липсва, равен на пакетния");
     std::printf("резултати в CSV: %s\n", csv_path.c_str());
     csv.row(std::string("meta,simd_available,0,compile,flag,") +
             (simd_leaf_scan_available() ? "1" : "0") + ",1");
+    csv.row("meta,simd_backend,0,compile,name,xsimd,1");
 
     const std::vector<std::size_t> sizes = {10000, 50000, 200000, 1000000};
     const std::size_t query_count = 20000;

@@ -2,20 +2,19 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <numeric>
 
-#if defined(__AVX__)
-#include <immintrin.h>
-#define POINTFORGE_SIMD_AVX 1
-#elif defined(__SSE2__)
-#include <emmintrin.h>
-#define POINTFORGE_SIMD_SSE2 1
+#include <xsimd/xsimd.hpp>
+
+#if !defined(XSIMD_NO_SUPPORTED_ARCHITECTURE)
+#define POINTFORGE_HAS_XSIMD 1
 #endif
 
 namespace pointforge {
 
 bool simd_leaf_scan_available() noexcept {
-#if defined(POINTFORGE_SIMD_AVX) || defined(POINTFORGE_SIMD_SSE2)
+#if defined(POINTFORGE_HAS_XSIMD)
     return true;
 #else
     return false;
@@ -180,40 +179,31 @@ void scan_leaf_scalar(const LeafScanContext& c, std::uint32_t begin, std::uint32
 // LISTING_END scan_leaf_scalar
 
 // Пълни distances[0..n) със squared distance. При n == kBlockSize и наличен
-// SSE2/AVX пътят ползва вградени функции; иначе същият скаларен цикъл като
-// пакетния път. Няма външна библиотека: само заглавните файлове на компилатора.
+// xsimd пътят ползва xsimd::batch; иначе същият скаларен цикъл като пакетния.
 void fill_block_distances(const float* bx, const float* by, const float* bz, float qx, float qy,
                           float qz, float* distances, std::uint32_t n, bool use_simd) {
+#if defined(POINTFORGE_HAS_XSIMD)
     if (use_simd && n == KdTree::kBlockSize) {
-#if defined(POINTFORGE_SIMD_AVX)
-        const __m256 vqx = _mm256_set1_ps(qx);
-        const __m256 vqy = _mm256_set1_ps(qy);
-        const __m256 vqz = _mm256_set1_ps(qz);
-        for (std::uint32_t j = 0; j < KdTree::kBlockSize; j += 8) {
-            const __m256 dx = _mm256_sub_ps(_mm256_loadu_ps(bx + j), vqx);
-            const __m256 dy = _mm256_sub_ps(_mm256_loadu_ps(by + j), vqy);
-            const __m256 dz = _mm256_sub_ps(_mm256_loadu_ps(bz + j), vqz);
-            const __m256 d2 =
-                _mm256_add_ps(_mm256_add_ps(_mm256_mul_ps(dx, dx), _mm256_mul_ps(dy, dy)),
-                              _mm256_mul_ps(dz, dz));
-            _mm256_storeu_ps(distances + j, d2);
+        using batch = xsimd::batch<float>;
+        static_assert(KdTree::kBlockSize % batch::size == 0,
+                      "kBlockSize must be a multiple of xsimd::batch<float>::size");
+        const batch vqx(qx);
+        const batch vqy(qy);
+        const batch vqz(qz);
+        for (std::uint32_t j = 0; j < KdTree::kBlockSize; j += static_cast<std::uint32_t>(batch::size)) {
+            const batch dx = xsimd::load_unaligned(bx + j) - vqx;
+            const batch dy = xsimd::load_unaligned(by + j) - vqy;
+            const batch dz = xsimd::load_unaligned(bz + j) - vqz;
+            // fma(a,a, fma(b,b, c*c)) == a*a + b*b + c*c; xsimd избира FMA когато
+            // архитектурата го има, иначе еквивалентни mul/add.
+            const batch d2 = xsimd::fma(dx, dx, xsimd::fma(dy, dy, dz * dz));
+            xsimd::store_unaligned(distances + j, d2);
         }
         return;
-#elif defined(POINTFORGE_SIMD_SSE2)
-        const __m128 vqx = _mm_set1_ps(qx);
-        const __m128 vqy = _mm_set1_ps(qy);
-        const __m128 vqz = _mm_set1_ps(qz);
-        for (std::uint32_t j = 0; j < KdTree::kBlockSize; j += 4) {
-            const __m128 dx = _mm_sub_ps(_mm_loadu_ps(bx + j), vqx);
-            const __m128 dy = _mm_sub_ps(_mm_loadu_ps(by + j), vqy);
-            const __m128 dz = _mm_sub_ps(_mm_loadu_ps(bz + j), vqz);
-            const __m128 d2 =
-                _mm_add_ps(_mm_add_ps(_mm_mul_ps(dx, dx), _mm_mul_ps(dy, dy)), _mm_mul_ps(dz, dz));
-            _mm_storeu_ps(distances + j, d2);
-        }
-        return;
-#endif
     }
+#else
+    (void)use_simd;
+#endif
 
     for (std::uint32_t j = 0; j < n; ++j) {
         const float dx = bx[j] - qx;
@@ -225,8 +215,7 @@ void fill_block_distances(const float* bx, const float* by, const float* bz, flo
 
 // Пакетен път. Разстоянията за целия блок се смятат в цикъл без разклонения и
 // без обръщение към купчината. Това е формата, която компилаторът може да
-// векторизира сам; отделният SIMD път по-долу прави същото с явни вградени
-// функции, за да не се разчита на отчета на компилатора.
+// векторизира сам; NnPath::Simd ползва xsimd за същата сметка.
 //
 // Обновяването на купчината е втори цикъл. Преди него блокът се отхвърля
 // изцяло, ако и най-близката му точка е по-далече от най-лошата приета, което

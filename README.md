@@ -11,12 +11,13 @@ finding the points near a given point, so that primitive is built once as a sepa
 a k-d tree, with three interchangeable inner loops so the cost of each can be measured against
 the others. The pipeline is arranged so each stage can be timed and checked on its own.
 
-## No dependencies
+## Dependencies
 
-The build needs a C++20 compiler and CMake 3.20 or newer. Nothing else. There is no package
-manager, no network fetch at configure time, and no optional feature that quietly turns itself off.
+The build needs a C++20 compiler and CMake 3.20 or newer. The only third-party dependency is
+**xsimd** 13.2.0, vendored under `third_party/xsimd` (headers only). CMake does not use
+FetchContent and does not touch the network at configure time.
 
-That constraint shapes three things in the source tree:
+That constraint still shapes three things written in-tree:
 
 - The test runner is 118 lines in `tests/test_framework.hpp` plus a `main`, registered with CTest.
 - The timing harness is `std::chrono::steady_clock` in `include/pointforge/timing.hpp`.
@@ -30,7 +31,7 @@ That constraint shapes three things in the source tree:
 | Cloud I/O | ASCII PLY and ASCII PCD, read and write, columns matched by name | `src/cloud_io.cpp` |
 | Voxel grid downsampling | Configurable leaf size, centroid per cell, repeatable output order | `src/voxel_grid.cpp` |
 | k-d tree | Median split on the widest axis, kNN, radius search, single nearest | `src/kdtree.cpp` |
-| Three query paths | Scalar, batched, and SIMD leaf scan behind one method, selected by argument | `src/kdtree.cpp` |
+| Three query paths | Scalar, batched, and xsimd leaf scan behind one method, selected by argument | `src/kdtree.cpp` |
 | ICP registration | Nearest-neighbour correspondence, distance rejection, Kabsch/SVD, RMSE reporting | `src/icp.cpp` |
 | Image I/O | Binary PGM (P5) and PPM (P6), header comments handled | `src/image_io.cpp` |
 | Edge detection | Separable Gaussian, Sobel, non-maximum suppression, hysteresis threshold | `src/image_ops.cpp` |
@@ -128,12 +129,13 @@ spread beside it. On a machine with background load the median moves and the min
 the spread column is what tells you which case you are in. The recorded runs are in `results/`.
 
 `measurements_baseline.csv` and `measurements_native.csv` are the original scalar-versus-batched
-runs. `measurements_simd.csv` and `measurements_simd_native.csv` add the explicit SIMD path on a
-second machine. Isolated leaf scan on the default SSE2 build is faster for SIMD than for scalar
-(ratio 2.30 to 2.79 at k = 1). The same protocol with `-march=native` is not: scalar-over-SIMD
-sits between 0.86 and 1.00. Full-tree queries do not support a speedup claim. Assembler evidence
-for packed SSE/AVX in the SIMD leaf fill is in `results/compiler_simd_report.txt`. GCC's
-auto-vectoriser report for the non-intrinsic remainder loop is in `results/auto_vec_opt_info.txt`.
+runs. `measurements_simd.csv` and `measurements_simd_native.csv` are the xsimd path on a second
+machine (re-run after switching from compiler intrinsics; those older intrinsic numbers are not
+kept as current). Isolated leaf scan on the default build is faster for xsimd than for scalar
+(ratio 2.08 to 2.95 at k = 1). With `-march=native` on the same machine the ratio is 1.04 to
+3.41. Full-tree queries do not support a speedup claim. Assembler evidence for the xsimd leaf
+fill is in `results/compiler_simd_report.txt`. GCC's auto-vectoriser report for the non-xsimd
+remainder loop is in `results/auto_vec_opt_info.txt`.
 
 To measure with the full instruction set of the build machine:
 
@@ -170,7 +172,7 @@ toolchain. Unfilled facts are marked with `\TODO{...}` and are found with
 - [x] Binary PGM and PPM reader and writer
 - [x] Voxel grid downsampling
 - [x] k-d tree with kNN, radius search and single nearest
-- [x] Scalar, batched and SIMD leaf scan, measured
+- [x] Scalar, batched and xsimd leaf scan, measured
 - [x] Point-to-point ICP with SVD-based transform estimation
 - [x] Gaussian blur, Sobel, non-maximum suppression, hysteresis
 - [x] Connected component labelling
@@ -180,6 +182,7 @@ toolchain. Unfilled facts are marked with `\TODO{...}` and are found with
 - [x] Demo
 - [x] Measurements recorded and written into the report
 - [x] GitHub Actions: configure, build, ctest on Ubuntu (no sanitizers, no coverage)
+- [x] Vendored xsimd 13.2.0 (only third-party dependency)
 
 ## License
 

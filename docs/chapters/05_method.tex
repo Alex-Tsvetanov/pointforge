@@ -35,9 +35,8 @@ Windows 11 Pro N, g++ 15.2.0 под MinGW-w64, CMake 4.3.2 и Ninja 1.13.2, с �
 
 Табл.~\ref{tab:leafscan-simd} и трипътното сравнение скаларен / пакетен / SIMD са получени на
 друга машина и не се смесват с горните числа: Intel Xeon (KVM), 4 ядра, 15 GiB оперативна
-памет, Linux, g++ 13.3.0, същите флагове. На тази компилация
-\code{simd\_leaf\_scan\_available()} връща истина. Подразбиращото се изграждане ползва SSE2;
-изграждането с \code{-march=native} ползва AVX. Записаните изпълнения са
+памет, Linux, g++ 13.3.0, същите флагове, с вендорирания \code{xsimd} 13.2.0. На тази
+компилация \code{simd\_leaf\_scan\_available()} връща истина. Записаните изпълнения са
 \code{results/measurements\_simd.csv} и \code{results/measurements\_simd\_native.csv}.
 
 Отчита се \textbf{минимумът} от повторенията, а медианата и разсейването стоят до него: при

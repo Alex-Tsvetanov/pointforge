@@ -30,19 +30,20 @@
 проверките и обновяванията. Между двата стои проверка, която не е оптимизация на дребно: ако
 купчината е пълна и дори най-близката точка от блока е по-далече от най-лошата приета, целият
 блок се пропуска. SIMD пътят ползва същия блоков договор, но първият цикъл е написан с
-вградени функции: SSE2 при подразбиращата се компилация, AVX когато компилаторът дефинира
-\code{\_\_AVX\_\_}. При липса на тези макроси пътят съвпада с пакетния;
-\code{simd\_leaf\_scan\_available()} казва кой от двата случая е налице.
+\code{xsimd::batch}: \code{load\_unaligned}, \code{fma} и \code{store\_unaligned}. Ширината на
+пакета я избира \code{xsimd} според компилацията (SSE2 по подразбиране, по-широк регистър при
+\code{-march=native}). При липса на поддържана архитектура в \code{xsimd} пътят съвпада с
+пакетния; \code{simd\_leaf\_scan\_available()} казва кой от двата случая е налице.
 
 Че SIMD пътят съдържа векторни инструкции, е проверено, а не предположено. Записът
 \code{results/compiler\_simd\_report.txt} е \code{objdump} на \code{fill\_block\_distances} от
 изграждане с \code{-O3} без \code{-march=native}: там стоят \code{mulps}, \code{addps},
 \code{subps} и \code{movups} върху \code{xmm}. Същият файл съдържа и изграждането с
-\code{-march=native}: \code{vmulps}, \code{vsubps}, \code{vmovups} върху \code{ymm}. Отчетът
-на GCC \code{-fopt-info-vec-optimized} за същия файл е в
-\code{results/auto\_vec\_opt\_info.txt}: скаларният остатъчен цикъл в
-\code{fill\_block\_distances} е отбелязан като \code{loop vectorized using 16 byte vectors}.
-Това е автовекторизация на пътя без интринсици, не заместител на явния SIMD.
+\code{-march=native}: по-широки \code{ymm} инструкции. Отчетът на GCC
+\code{-fopt-info-vec-optimized} е в \code{results/auto\_vec\_opt\_info.txt}: скаларният
+остатъчен цикъл в \code{fill\_block\_distances} е отбелязан като
+\code{loop vectorized using 16 byte vectors}. Това е автовекторизация на пътя без
+\code{xsimd}, не заместител на SIMD пътя.
 
 \textbf{Разлагане и съвместяване.} Вместо библиотека за линейна алгебра е написан едностранен
 метод на Якоби за разлагане на матрица 3x3. Той е предпочетен пред разлагане на $A^{T}A$, защото

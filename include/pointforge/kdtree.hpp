@@ -30,12 +30,11 @@ struct Neighbor {
 enum class NnPath {
     Scalar,   // точка по точка, с проверка след всяка
     Batched,  // на блокове от kBlockSize, разстоянията се смятат без разклонения
-    Simd,     // същият блоков договор, разстоянията с SSE2/AVX вградени функции
+    Simd,     // същият блоков договор, разстоянията чрез xsimd::batch
 };
 
-// true, когато NnPath::Simd ползва векторни инструкции на тази компилация.
-// При липса на SSE2/AVX пътят съвпада с Batched; сравнението пак е валидно,
-// а флагът казва дали разликата изобщо може да дойде от SIMD.
+// true, когато NnPath::Simd ползва xsimd върху поддържана архитектура.
+// При липса на SIMD архитектура в xsimd пътят съвпада с Batched.
 bool simd_leaf_scan_available() noexcept;
 
 struct KdTreeOptions {
