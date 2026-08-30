@@ -5,16 +5,14 @@
 \addcontentsline{toc}{section}{ПРИЛОЖЕНИЕ}
 
 Целият изходен текст, записаните изпълнения на измерванията в \code{results/} и този
-документ са в публичното хранилище \url{https://github.com/Alex-Tsvetanov/pointforge}.
-Единствената външна зависимост е \code{xsimd} 13.2.0, вградена в \code{third\_party/xsimd}.
+документ са в публичното хранилище \url{https://github.com/Alex-Tsvetanov/pointforge}. Зависимост: вендориран \code{xsimd}; \code{results/cloud-vm/} не е от отчета.
 Табл.~\ref{tab:files} дава разпределението на кода; броят редове е за заглавния файл и
 реализацията взети заедно. Изгражда се с \code{cmake -S . -B build -DCMAKE\_BUILD\_TYPE=Release}
 и \code{cmake --build build}, след което \code{ctest --test-dir build} пуска проверките,
 целта \code{demo} произвежда изходните файлове, а \code{pointforge\_bench --csv <файл>}
 повтаря измерванията. Втората конфигурация се получава с
 \code{-DPOINTFORGE\_NATIVE\_ARCH=ON} и не е преносима, затова е изключена по подразбиране.
-Изграждането и \code{ctest} на Ubuntu са записани в \code{.github/workflows/ci.yml}; там не се
-пускат санитайзери и покритие, и за тях не се претендира.
+CI на Ubuntu: \code{.github/workflows/ci.yml}.
 
 \begin{table}[H]
 \centering
@@ -39,7 +37,7 @@
 \code{text.hpp}                &  37 & подравняване на изхода при кирилица \\
 \code{apps/demo.cpp}           & 256 & демонстрация: една команда, видим изход \\
 \code{benchmarks/bench.cpp}    & 443 & измервания, изход и във формат CSV \\
-\code{tests/}                  & 1\,385 & рамка и шест групи проверки, 60 случая \\
+\code{tests/}                  & 1\,391 & рамка и шест групи проверки, 60 случая \\
 \bottomrule
 \end{tabular}
 \end{table}

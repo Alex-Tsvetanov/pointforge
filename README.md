@@ -128,14 +128,17 @@ The harness reports the minimum of the repetitions as the headline figure, with 
 spread beside it. On a machine with background load the median moves and the minimum does not, and
 the spread column is what tells you which case you are in. The recorded runs are in `results/`.
 
-`measurements_baseline.csv` and `measurements_native.csv` are the original scalar-versus-batched
-runs. `measurements_simd.csv` and `measurements_simd_native.csv` are the xsimd path on a second
-machine (re-run after switching from compiler intrinsics; those older intrinsic numbers are not
-kept as current). Isolated leaf scan on the default build is faster for xsimd than for scalar
-(ratio 2.08 to 2.95 at k = 1). With `-march=native` on the same machine the ratio is 1.04 to
-3.41. Full-tree queries do not support a speedup claim. Assembler evidence for the xsimd leaf
-fill is in `results/compiler_simd_report.txt`. GCC's auto-vectoriser report for the non-xsimd
-remainder loop is in `results/auto_vec_opt_info.txt`.
+`measurements_baseline.csv` and `measurements_native.csv` are the exhibit timings: scalar versus
+batched on the author's Windows machine (Ryzen 5 3600). Those are the numbers cited in the
+Bulgarian report tables.
+
+Files under `results/cloud-vm/` (`measurements_simd.csv`, `measurements_simd_native.csv`, and
+the matching `.txt` logs) were produced on a Cursor cloud Linux VM. They are development
+artefacts only and must not be cited as report numbers. SIMD / xsimd leaf-scan speedups on the
+author's Windows machine are still unmeasured; the report marks them with `\TODO`. Full-tree
+queries do not support a speedup claim either. Assembler evidence for the xsimd leaf fill is in
+`results/compiler_simd_report.txt`. GCC's auto-vectoriser report for the non-xsimd remainder loop
+is in `results/auto_vec_opt_info.txt`.
 
 To measure with the full instruction set of the build machine:
 
@@ -166,13 +169,14 @@ toolchain. Unfilled facts are marked with `\TODO{...}` and are found with
 - [x] Repository scaffold
 - [x] Report skeleton, title page and chapter structure
 - [x] Bibliography
-- [x] CMake build, no third-party dependencies
+- [x] CMake build; only vendored xsimd as third-party dependency
 - [x] Point cloud and image data types
 - [x] ASCII PLY and PCD reader and writer
 - [x] Binary PGM and PPM reader and writer
 - [x] Voxel grid downsampling
 - [x] k-d tree with kNN, radius search and single nearest
-- [x] Scalar, batched and xsimd leaf scan, measured
+- [x] Scalar, batched and xsimd leaf scan (correctness tested; Windows SIMD timing TODO)
+- [x] Exhibit timings: scalar vs batched on Windows (`measurements_baseline` / `_native`)
 - [x] Point-to-point ICP with SVD-based transform estimation
 - [x] Gaussian blur, Sobel, non-maximum suppression, hysteresis
 - [x] Connected component labelling
