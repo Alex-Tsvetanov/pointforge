@@ -69,3 +69,58 @@ auto-vectorisation of a scalar loop.
       fd:	je     250 <_ZN10pointforge12_GLOBAL__N_120fill_block_distancesEPKfS2_S2_fffPfjb+0x230>
      127:	je     250 <_ZN10pointforge12_GLOBAL__N_120fill_block_distancesEPKfS2_S2_fffPfjb+0x230>
      13b:	jbe    250 <_ZN10pointforge12_GLOBAL__N_120fill_block_distancesEPKfS2_S2_fffPfjb+0x230>
+
+=== Native build (-march=native) ===
+Compiler: g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+Intrinsics path: AVX (__AVX__), 8 floats per ymm register
+
+0000000000000020 <_ZN10pointforge12_GLOBAL__N_120fill_block_distancesEPKfS2_S2_fffPfjb>:
+      28:	jne    a0 <_ZN10pointforge12_GLOBAL__N_120fill_block_distancesEPKfS2_S2_fffPfjb+0x80>
+      2d:	je     a0 <_ZN10pointforge12_GLOBAL__N_120fill_block_distancesEPKfS2_S2_fffPfjb+0x80>
+      2f:	vmovups (%rdi),%ymm7
+      33:	vbroadcastss %xmm0,%ymm5
+      38:	vbroadcastss %xmm1,%ymm1
+      3d:	vmovups (%rdx),%ymm6
+      41:	vbroadcastss %xmm2,%ymm2
+      46:	vsubps %ymm5,%ymm7,%ymm4
+      4a:	vmovups (%rsi),%ymm7
+      4e:	vsubps %ymm2,%ymm6,%ymm0
+      52:	vsubps %ymm1,%ymm7,%ymm3
+      56:	vmulps %ymm4,%ymm4,%ymm4
+      5a:	vfmadd132ps %ymm3,%ymm4,%ymm3
+      5f:	vfmadd132ps %ymm0,%ymm3,%ymm0
+      64:	vmovups %ymm0,(%rcx)
+      68:	vmovups 0x20(%rdi),%ymm3
+      6d:	vmovups 0x20(%rsi),%ymm0
+      72:	vsubps %ymm5,%ymm3,%ymm3
+      76:	vsubps %ymm1,%ymm0,%ymm1
+      7a:	vmovups 0x20(%rdx),%ymm0
+      7f:	vsubps %ymm2,%ymm0,%ymm0
+      83:	vmulps %ymm3,%ymm3,%ymm3
+      87:	vfmadd132ps %ymm1,%ymm3,%ymm1
+      8c:	vfmadd132ps %ymm0,%ymm1,%ymm0
+      91:	vmovups %ymm0,0x20(%rcx)
+      99:	ret
+      a3:	je     2e0 <_ZN10pointforge12_GLOBAL__N_120fill_block_distancesEPKfS2_S2_fffPfjb+0x2c0>
+      b0:	jbe    290 <_ZN10pointforge12_GLOBAL__N_120fill_block_distancesEPKfS2_S2_fffPfjb+0x270>
+      dd:	je     290 <_ZN10pointforge12_GLOBAL__N_120fill_block_distancesEPKfS2_S2_fffPfjb+0x270>
+      f1:	jbe    290 <_ZN10pointforge12_GLOBAL__N_120fill_block_distancesEPKfS2_S2_fffPfjb+0x270>
+      fa:	jbe    2e9 <_ZN10pointforge12_GLOBAL__N_120fill_block_distancesEPKfS2_S2_fffPfjb+0x2c9>
+     103:	vbroadcastss %xmm5,%ymm8
+     108:	vbroadcastss %xmm1,%ymm7
+     113:	vbroadcastss %xmm2,%ymm6
+     120:	vmovups (%rdi,%rax,1),%ymm4
+     125:	vmovups (%rdx,%rax,1),%ymm0
+     12a:	vsubps %ymm8,%ymm4,%ymm3
+     12f:	vmovups (%rsi,%rax,1),%ymm4
+     134:	vsubps %ymm6,%ymm0,%ymm0
+     138:	vsubps %ymm7,%ymm4,%ymm4
+     13c:	vmulps %ymm4,%ymm4,%ymm4
+     140:	vfmadd132ps %ymm3,%ymm4,%ymm3
+     145:	vfmadd132ps %ymm0,%ymm3,%ymm0
+     14a:	vmovups %ymm0,(%rcx,%rax,1)
+     156:	jne    120 <_ZN10pointforge12_GLOBAL__N_120fill_block_distancesEPKfS2_S2_fffPfjb+0x100>
+     162:	je     2d8 <_ZN10pointforge12_GLOBAL__N_120fill_block_distancesEPKfS2_S2_fffPfjb+0x2b8>
+     176:	jbe    2e1 <_ZN10pointforge12_GLOBAL__N_120fill_block_distancesEPKfS2_S2_fffPfjb+0x2c1>
+     182:	vbroadcastss %xmm5,%xmm0
+     187:	vmovups (%rdi,%r9,4),%xmm6

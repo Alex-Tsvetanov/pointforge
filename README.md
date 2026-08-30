@@ -8,8 +8,8 @@ PointForge takes point clouds and grayscale images and turns them into something
 reason about: downsampled geometry, neighbourhood queries, two overlapping scans brought into one
 coordinate frame, edges, and labelled regions. Every geometric stage leans on the same primitive,
 finding the points near a given point, so that primitive is built once as a separate component over
-a k-d tree, with two interchangeable inner loops so the cost of each can be measured against the
-other. The pipeline is arranged so each stage can be timed and checked on its own.
+a k-d tree, with three interchangeable inner loops so the cost of each can be measured against
+the others. The pipeline is arranged so each stage can be timed and checked on its own.
 
 ## No dependencies
 
@@ -30,7 +30,7 @@ That constraint shapes three things in the source tree:
 | Cloud I/O | ASCII PLY and ASCII PCD, read and write, columns matched by name | `src/cloud_io.cpp` |
 | Voxel grid downsampling | Configurable leaf size, centroid per cell, repeatable output order | `src/voxel_grid.cpp` |
 | k-d tree | Median split on the widest axis, kNN, radius search, single nearest | `src/kdtree.cpp` |
-| Two query paths | Scalar and batched leaf scan behind one method, selected by argument | `src/kdtree.cpp` |
+| Three query paths | Scalar, batched, and SIMD leaf scan behind one method, selected by argument | `src/kdtree.cpp` |
 | ICP registration | Nearest-neighbour correspondence, distance rejection, Kabsch/SVD, RMSE reporting | `src/icp.cpp` |
 | Image I/O | Binary PGM (P5) and PPM (P6), header comments handled | `src/image_io.cpp` |
 | Edge detection | Separable Gaussian, Sobel, non-maximum suppression, hysteresis threshold | `src/image_ops.cpp` |
@@ -52,7 +52,7 @@ flowchart TD
     A[PLY / PCD file, or the synthetic generator] --> B[PointCloud, one array per coordinate]
     B --> C[Voxel grid downsampling]
     C --> D[KdTree]
-    D -->|scalar or batched leaf scan| E[kNN / radius / nearest]
+    D -->|scalar, batched or SIMD leaf scan| E[kNN / radius / nearest]
     E --> F[ICP: correspondence, rejection, Kabsch SVD]
     F --> G[Rigid transform, RMSE, iteration count]
 
@@ -91,6 +91,9 @@ run directly, with an optional suite name:
 ./build/pointforge_tests kdtree     # one suite
 ```
 
+GitHub Actions (`.github/workflows/ci.yml`) does the same on Ubuntu: configure Release with g++,
+build, and `ctest`. It does not run sanitizers or coverage.
+
 ## Run the demo
 
 ```bash
@@ -123,6 +126,14 @@ Or directly, which also lets you name the CSV:
 The harness reports the minimum of the repetitions as the headline figure, with the median and the
 spread beside it. On a machine with background load the median moves and the minimum does not, and
 the spread column is what tells you which case you are in. The recorded runs are in `results/`.
+
+`measurements_baseline.csv` and `measurements_native.csv` are the original scalar-versus-batched
+runs. `measurements_simd.csv` and `measurements_simd_native.csv` add the explicit SIMD path on a
+second machine. Isolated leaf scan on the default SSE2 build is faster for SIMD than for scalar
+(ratio 2.30 to 2.79 at k = 1). The same protocol with `-march=native` is not: scalar-over-SIMD
+sits between 0.86 and 1.00. Full-tree queries do not support a speedup claim. Assembler evidence
+for packed SSE/AVX in the SIMD leaf fill is in `results/compiler_simd_report.txt`. GCC's
+auto-vectoriser report for the non-intrinsic remainder loop is in `results/auto_vec_opt_info.txt`.
 
 To measure with the full instruction set of the build machine:
 
@@ -159,7 +170,7 @@ toolchain. Unfilled facts are marked with `\TODO{...}` and are found with
 - [x] Binary PGM and PPM reader and writer
 - [x] Voxel grid downsampling
 - [x] k-d tree with kNN, radius search and single nearest
-- [x] Scalar and batched leaf scan, both measured
+- [x] Scalar, batched and SIMD leaf scan, measured
 - [x] Point-to-point ICP with SVD-based transform estimation
 - [x] Gaussian blur, Sobel, non-maximum suppression, hysteresis
 - [x] Connected component labelling
@@ -168,6 +179,7 @@ toolchain. Unfilled facts are marked with `\TODO{...}` and are found with
 - [x] Measurement harness with CSV output
 - [x] Demo
 - [x] Measurements recorded and written into the report
+- [x] GitHub Actions: configure, build, ctest on Ubuntu (no sanitizers, no coverage)
 
 ## License
 
