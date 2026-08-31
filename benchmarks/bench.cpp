@@ -99,7 +99,12 @@ int main(int argc, char** argv) {
 #else
     std::printf("неизвестен\n");
 #endif
+    std::printf("SIMD път на тази компилация: %s\n",
+                simd_leaf_scan_available() ? "наличен (xsimd)" : "липсва, равен на пакетния");
     std::printf("резултати в CSV: %s\n", csv_path.c_str());
+    csv.row(std::string("meta,simd_available,0,compile,flag,") +
+            (simd_leaf_scan_available() ? "1" : "0") + ",1");
+    csv.row("meta,simd_backend,0,compile,name,xsimd,1");
 
     const std::vector<std::size_t> sizes = {10000, 50000, 200000, 1000000};
     const std::size_t query_count = 20000;
@@ -143,11 +148,11 @@ int main(int argc, char** argv) {
     }
 
     // -----------------------------------------------------------------
-    // 2. Пропускателна способност на заявката, скаларен срещу пакетен път
+    // 2. Пропускателна способност на заявката: скаларен / пакетен / SIMD
     // -----------------------------------------------------------------
-    section("2. Заявка за k най-близки съседи, скаларен срещу пакетен път");
-    header({{"точки", 12}, {"k", 4}, {"скаларен мин", 14}, {"пакетен мин", 14}, {"отношение", 10},
-            {"разсейване, %", 14}, {"заявки/s (пак.)", 14}});
+    section("2. Заявка за k най-близки съседи, скаларен / пакетен / SIMD");
+    header({{"точки", 12}, {"k", 4}, {"скаларен", 12}, {"пакетен", 12}, {"SIMD", 12},
+            {"скал/пак", 10}, {"скал/SIMD", 10}, {"разс., %", 10}});
 
     for (std::size_t i = 0; i < sizes.size(); ++i) {
         const KdTree& tree = trees[i];
@@ -163,30 +168,39 @@ int main(int argc, char** argv) {
             };
             const TimingStats scalar = measure(kQueryReps, kQueryWarmup, sweep(NnPath::Scalar));
             const TimingStats batched = measure(kQueryReps, kQueryWarmup, sweep(NnPath::Batched));
-            const double ratio = batched.min_ms > 0.0 ? scalar.min_ms / batched.min_ms : 0.0;
+            const TimingStats simd = measure(kQueryReps, kQueryWarmup, sweep(NnPath::Simd));
+            const double ratio_batched =
+                batched.min_ms > 0.0 ? scalar.min_ms / batched.min_ms : 0.0;
+            const double ratio_simd = simd.min_ms > 0.0 ? scalar.min_ms / simd.min_ms : 0.0;
             const double throughput =
-                batched.min_ms > 0.0 ? static_cast<double>(query_count) / (batched.min_ms / 1000.0)
-                                        : 0.0;
-            std::printf("%12zu %4zu %14.2f %14.2f %10.3f %14.1f %14.0f\n", sizes[i], k,
-                        scalar.min_ms, batched.min_ms, ratio,
-                        100.0 * std::max(scalar.spread_ratio(), batched.spread_ratio()), throughput);
+                simd.min_ms > 0.0 ? static_cast<double>(query_count) / (simd.min_ms / 1000.0) : 0.0;
+            const double spread = 100.0 * std::max({scalar.spread_ratio(), batched.spread_ratio(),
+                                                    simd.spread_ratio()});
+            std::printf("%12zu %4zu %12.2f %12.2f %12.2f %10.3f %10.3f %10.1f\n", sizes[i], k,
+                        scalar.min_ms, batched.min_ms, simd.min_ms, ratio_batched, ratio_simd,
+                        spread);
 
             const std::string prefix =
                 "knn,k" + std::to_string(k) + "," + std::to_string(sizes[i]) + ",";
             csv.row(prefix + "scalar,min_ms," + std::to_string(scalar.min_ms) + ",ms");
             csv.row(prefix + "batched,min_ms," + std::to_string(batched.min_ms) + ",ms");
+            csv.row(prefix + "simd,min_ms," + std::to_string(simd.min_ms) + ",ms");
             csv.row(prefix + "batched,spread_pct," +
                     std::to_string(100.0 * batched.spread_ratio()) + ",%");
-            csv.row(prefix + "batched,queries_per_s," + std::to_string(throughput) + ",1/s");
+            csv.row(prefix + "simd,spread_pct," + std::to_string(100.0 * simd.spread_ratio()) +
+                    ",%");
+            csv.row(prefix + "simd,queries_per_s," + std::to_string(throughput) + ",1/s");
+            csv.row(prefix + "ratio,scalar_over_batched," + std::to_string(ratio_batched) + ",1");
+            csv.row(prefix + "ratio,scalar_over_simd," + std::to_string(ratio_simd) + ",1");
         }
     }
 
     // -----------------------------------------------------------------
     // 3. Заявка по радиус
     // -----------------------------------------------------------------
-    section("3. Заявка по радиус, скаларен срещу пакетен път");
-    header({{"точки", 12}, {"радиус", 8}, {"скаларен мин", 14}, {"пакетен мин", 14},
-            {"отношение", 10}, {"средно съседи", 12}});
+    section("3. Заявка по радиус, скаларен / пакетен / SIMD");
+    header({{"точки", 12}, {"радиус", 8}, {"скаларен", 12}, {"пакетен", 12}, {"SIMD", 12},
+            {"скал/пак", 10}, {"скал/SIMD", 10}, {"средно съседи", 12}});
 
     for (std::size_t i = 0; i < sizes.size(); ++i) {
         const KdTree& tree = trees[i];
@@ -205,15 +219,19 @@ int main(int argc, char** argv) {
             };
             const TimingStats scalar = measure(kQueryReps, kQueryWarmup, sweep(NnPath::Scalar));
             const TimingStats batched = measure(kQueryReps, kQueryWarmup, sweep(NnPath::Batched));
-            const double ratio = batched.min_ms > 0.0 ? scalar.min_ms / batched.min_ms : 0.0;
-            std::printf("%12zu %8.2f %14.2f %14.2f %10.3f %12.1f\n", sizes[i],
-                        static_cast<double>(radius), scalar.min_ms, batched.min_ms, ratio,
-                        static_cast<double>(found) / 2000.0);
+            const TimingStats simd = measure(kQueryReps, kQueryWarmup, sweep(NnPath::Simd));
+            const double ratio_batched =
+                batched.min_ms > 0.0 ? scalar.min_ms / batched.min_ms : 0.0;
+            const double ratio_simd = simd.min_ms > 0.0 ? scalar.min_ms / simd.min_ms : 0.0;
+            std::printf("%12zu %8.2f %12.2f %12.2f %12.2f %10.3f %10.3f %12.1f\n", sizes[i],
+                        static_cast<double>(radius), scalar.min_ms, batched.min_ms, simd.min_ms,
+                        ratio_batched, ratio_simd, static_cast<double>(found) / 2000.0);
 
             const std::string prefix = "radius,r" + std::to_string(radius) + "," +
                                        std::to_string(sizes[i]) + ",";
             csv.row(prefix + "scalar,min_ms," + std::to_string(scalar.min_ms) + ",ms");
             csv.row(prefix + "batched,min_ms," + std::to_string(batched.min_ms) + ",ms");
+            csv.row(prefix + "simd,min_ms," + std::to_string(simd.min_ms) + ",ms");
         }
     }
 
@@ -221,8 +239,8 @@ int main(int argc, char** argv) {
     // 4. Размер на листа
     // -----------------------------------------------------------------
     section("4. Влияние на размера на листа, 200000 точки, k = 8");
-    header({{"лист", 12}, {"построяване мин", 15}, {"скаларен мин", 14}, {"пакетен мин", 14},
-            {"отношение", 10}});
+    header({{"лист", 12}, {"построяване", 14}, {"скаларен", 12}, {"пакетен", 12}, {"SIMD", 12},
+            {"скал/пак", 10}, {"скал/SIMD", 10}});
     {
         const PointCloud& cloud = clouds[2];
         for (const std::uint32_t leaf : {std::uint32_t{4}, std::uint32_t{8}, std::uint32_t{16},
@@ -240,12 +258,16 @@ int main(int argc, char** argv) {
             };
             const TimingStats scalar = measure(kQueryReps, kQueryWarmup, sweep(NnPath::Scalar));
             const TimingStats batched = measure(kQueryReps, kQueryWarmup, sweep(NnPath::Batched));
-            const double ratio = batched.min_ms > 0.0 ? scalar.min_ms / batched.min_ms : 0.0;
-            std::printf("%12u %14.2f %14.2f %14.2f %10.3f\n", leaf, build.min_ms,
-                        scalar.min_ms, batched.min_ms, ratio);
+            const TimingStats simd = measure(kQueryReps, kQueryWarmup, sweep(NnPath::Simd));
+            const double ratio_batched =
+                batched.min_ms > 0.0 ? scalar.min_ms / batched.min_ms : 0.0;
+            const double ratio_simd = simd.min_ms > 0.0 ? scalar.min_ms / simd.min_ms : 0.0;
+            std::printf("%12u %14.2f %12.2f %12.2f %12.2f %10.3f %10.3f\n", leaf, build.min_ms,
+                        scalar.min_ms, batched.min_ms, simd.min_ms, ratio_batched, ratio_simd);
             const std::string prefix = "leaf,leaf" + std::to_string(leaf) + ",200000,";
             csv.row(prefix + "scalar,min_ms," + std::to_string(scalar.min_ms) + ",ms");
             csv.row(prefix + "batched,min_ms," + std::to_string(batched.min_ms) + ",ms");
+            csv.row(prefix + "simd,min_ms," + std::to_string(simd.min_ms) + ",ms");
             csv.row(prefix + "build,min_ms," + std::to_string(build.min_ms) + ",ms");
         }
     }
@@ -261,8 +283,8 @@ int main(int argc, char** argv) {
     // примеси. Цената е, че това вече не е заявка, каквато някой би направил
     // на практика, затова разделът стои отделно, а не заменя раздел 2.
     section("5. Изолиран обхождащ цикъл на лист (дърво от един лист)");
-    header({{"точки в листа", 14}, {"k", 4}, {"скаларен мин", 14}, {"пакетен мин", 14},
-            {"отношение", 10}, {"разсейване, %", 14}});
+    header({{"точки в листа", 14}, {"k", 4}, {"скаларен", 12}, {"пакетен", 12}, {"SIMD", 12},
+            {"скал/пак", 10}, {"скал/SIMD", 10}, {"разс., %", 10}});
     {
         for (const std::size_t leaf_points : {std::size_t{1024}, std::size_t{8192},
                                               std::size_t{65536}}) {
@@ -282,17 +304,21 @@ int main(int argc, char** argv) {
                 };
                 const TimingStats scalar = measure(kQueryReps, kQueryWarmup, sweep(NnPath::Scalar));
                 const TimingStats batched = measure(kQueryReps, kQueryWarmup, sweep(NnPath::Batched));
-                const double ratio =
+                const TimingStats simd = measure(kQueryReps, kQueryWarmup, sweep(NnPath::Simd));
+                const double ratio_batched =
                     batched.min_ms > 0.0 ? scalar.min_ms / batched.min_ms : 0.0;
-                std::printf("%14zu %4zu %14.2f %14.2f %10.3f %14.1f\n", leaf_points, k,
-                            scalar.min_ms, batched.min_ms, ratio,
-                            100.0 * batched.spread_ratio());
+                const double ratio_simd = simd.min_ms > 0.0 ? scalar.min_ms / simd.min_ms : 0.0;
+                std::printf("%14zu %4zu %12.2f %12.2f %12.2f %10.3f %10.3f %10.1f\n", leaf_points, k,
+                            scalar.min_ms, batched.min_ms, simd.min_ms, ratio_batched, ratio_simd,
+                            100.0 * simd.spread_ratio());
 
                 const std::string prefix = "leafscan,k" + std::to_string(k) + "," +
                                            std::to_string(leaf_points) + ",";
                 csv.row(prefix + "scalar,min_ms," + std::to_string(scalar.min_ms) + ",ms");
                 csv.row(prefix + "batched,min_ms," + std::to_string(batched.min_ms) + ",ms");
-                csv.row(prefix + "ratio,scalar_over_batched," + std::to_string(ratio) + ",1");
+                csv.row(prefix + "simd,min_ms," + std::to_string(simd.min_ms) + ",ms");
+                csv.row(prefix + "ratio,scalar_over_batched," + std::to_string(ratio_batched) + ",1");
+                csv.row(prefix + "ratio,scalar_over_simd," + std::to_string(ratio_simd) + ",1");
             }
         }
         std::printf("\nвсяка редица е %s заявки, разпределени така, че общата работа да е една и съща\n",

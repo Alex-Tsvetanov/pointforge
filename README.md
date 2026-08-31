@@ -8,15 +8,16 @@ PointForge takes point clouds and grayscale images and turns them into something
 reason about: downsampled geometry, neighbourhood queries, two overlapping scans brought into one
 coordinate frame, edges, and labelled regions. Every geometric stage leans on the same primitive,
 finding the points near a given point, so that primitive is built once as a separate component over
-a k-d tree, with two interchangeable inner loops so the cost of each can be measured against the
-other. The pipeline is arranged so each stage can be timed and checked on its own.
+a k-d tree, with three interchangeable inner loops so the cost of each can be measured against
+the others. The pipeline is arranged so each stage can be timed and checked on its own.
 
-## No dependencies
+## Dependencies
 
-The build needs a C++20 compiler and CMake 3.20 or newer. Nothing else. There is no package
-manager, no network fetch at configure time, and no optional feature that quietly turns itself off.
+The build needs a C++20 compiler and CMake 3.20 or newer. The only third-party dependency is
+**xsimd** 13.2.0, vendored under `third_party/xsimd` (headers only). CMake does not use
+FetchContent and does not touch the network at configure time.
 
-That constraint shapes three things in the source tree:
+That constraint still shapes three things written in-tree:
 
 - The test runner is 118 lines in `tests/test_framework.hpp` plus a `main`, registered with CTest.
 - The timing harness is `std::chrono::steady_clock` in `include/pointforge/timing.hpp`.
@@ -30,7 +31,7 @@ That constraint shapes three things in the source tree:
 | Cloud I/O | ASCII PLY and ASCII PCD, read and write, columns matched by name | `src/cloud_io.cpp` |
 | Voxel grid downsampling | Configurable leaf size, centroid per cell, repeatable output order | `src/voxel_grid.cpp` |
 | k-d tree | Median split on the widest axis, kNN, radius search, single nearest | `src/kdtree.cpp` |
-| Two query paths | Scalar and batched leaf scan behind one method, selected by argument | `src/kdtree.cpp` |
+| Three query paths | Scalar, batched, and xsimd leaf scan behind one method, selected by argument | `src/kdtree.cpp` |
 | ICP registration | Nearest-neighbour correspondence, distance rejection, Kabsch/SVD, RMSE reporting | `src/icp.cpp` |
 | Image I/O | Binary PGM (P5) and PPM (P6), header comments handled | `src/image_io.cpp` |
 | Edge detection | Separable Gaussian, Sobel, non-maximum suppression, hysteresis threshold | `src/image_ops.cpp` |
@@ -52,7 +53,7 @@ flowchart TD
     A[PLY / PCD file, or the synthetic generator] --> B[PointCloud, one array per coordinate]
     B --> C[Voxel grid downsampling]
     C --> D[KdTree]
-    D -->|scalar or batched leaf scan| E[kNN / radius / nearest]
+    D -->|scalar, batched or SIMD leaf scan| E[kNN / radius / nearest]
     E --> F[ICP: correspondence, rejection, Kabsch SVD]
     F --> G[Rigid transform, RMSE, iteration count]
 
@@ -91,6 +92,9 @@ run directly, with an optional suite name:
 ./build/pointforge_tests kdtree     # one suite
 ```
 
+GitHub Actions (`.github/workflows/ci.yml`) does the same on Ubuntu: configure Release with g++,
+build, and `ctest`. It does not run sanitizers or coverage.
+
 ## Run the demo
 
 ```bash
@@ -124,6 +128,23 @@ The harness reports the minimum of the repetitions as the headline figure, with 
 spread beside it. On a machine with background load the median moves and the minimum does not, and
 the spread column is what tells you which case you are in. The recorded runs are in `results/`.
 
+`measurements_baseline.csv` and `measurements_native.csv` are the exhibit timings for the
+scalar-versus-batched tables in the Bulgarian report (author's Windows machine, Ryzen 5 3600).
+
+`results/measurements_simd.csv` is the three-path run on the same Windows 11 Pro N /
+Ryzen 5 3600 machine (2026-08-30, g++ 15.2.0 MinGW-Builds, Release, no `-march=native`,
+`simd_available=1`, xsimd).
+Isolated leaf-scan shows a scalar/SIMD ratio up to 2.048260 (`k=1`, leaf 8192). Full-tree kNN
+does not: ratios stay near 1, and at `n=1000000`, `k=1` SIMD is slower than scalar
+(`scalar_over_simd=0.943935`). The largest recorded spread in that file is 26.702212%
+(batched, `k=8`, `n=1000000`). Machine notes for that run are in
+`docs/measurements/report.txt`.
+
+Files under `results/cloud-vm/` were produced on a Cursor cloud Linux VM. They are development
+artefacts only and must not be cited as report numbers. Assembler evidence for the xsimd leaf
+fill is in `results/compiler_simd_report.txt`. GCC's auto-vectoriser report for the non-xsimd
+remainder loop is in `results/auto_vec_opt_info.txt`.
+
 To measure with the full instruction set of the build machine:
 
 ```bash
@@ -153,13 +174,14 @@ toolchain. Unfilled facts are marked with `\TODO{...}` and are found with
 - [x] Repository scaffold
 - [x] Report skeleton, title page and chapter structure
 - [x] Bibliography
-- [x] CMake build, no third-party dependencies
+- [x] CMake build; only vendored xsimd as third-party dependency
 - [x] Point cloud and image data types
 - [x] ASCII PLY and PCD reader and writer
 - [x] Binary PGM and PPM reader and writer
 - [x] Voxel grid downsampling
 - [x] k-d tree with kNN, radius search and single nearest
-- [x] Scalar and batched leaf scan, both measured
+- [x] Scalar, batched and xsimd leaf scan (correctness tested; exhibit timings in `measurements_simd.csv`)
+- [x] Exhibit timings: scalar vs batched on Windows (`measurements_baseline` / `_native`); three-path SIMD on same machine (`measurements_simd.csv`)
 - [x] Point-to-point ICP with SVD-based transform estimation
 - [x] Gaussian blur, Sobel, non-maximum suppression, hysteresis
 - [x] Connected component labelling
@@ -168,6 +190,8 @@ toolchain. Unfilled facts are marked with `\TODO{...}` and are found with
 - [x] Measurement harness with CSV output
 - [x] Demo
 - [x] Measurements recorded and written into the report
+- [x] GitHub Actions: configure, build, ctest on Ubuntu (no sanitizers, no coverage)
+- [x] Vendored xsimd 13.2.0 (only third-party dependency)
 
 ## License
 

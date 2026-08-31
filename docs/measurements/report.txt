@@ -1,0 +1,36 @@
+PointForge SIMD measurements — 2026-08-30
+
+Machine
+  OS: Microsoft Windows 11 Pro N, version 10.0.26200
+  CPU: AMD Ryzen 5 3600 6-Core Processor
+  threads: 12 logical processors
+
+Toolchain
+  g++ 15.2.0 (x86_64-posix-seh-rev0, MinGW-Builds)
+  CMake 4.3.2
+  Ninja 1.13.2
+
+Configure
+  cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=g++
+  POINTFORGE_NATIVE_ARCH off (no -march=native)
+
+SIMD
+  backend: xsimd (vendored)
+  compile flag simd_available=1
+
+Command
+  cmake --build build --target bench
+
+Raw CSV (complete, 226 lines; all groups present: meta, build, knn, radius, leaf, leafscan, voxel, icp, image)
+  results/measurements_simd.csv
+
+Image pipeline medians from the same run stdout (CSV stores min_ms only for image rows)
+  гаусово изглаждане: min 30.036 median 31.066
+  градиент по Собел: min 16.793 median 16.986
+  потискане на немаксимуми: min 11.293 median 11.508
+  двупрагово решение: min 0.723 median 0.787
+  свързани компоненти: min 5.046 median 5.298
+
+Notes
+  results/cloud-vm/ is quarantined and must not be cited in the report.
+  ICP sigma 0.020 and 0.040 did not converge (60 iterations).

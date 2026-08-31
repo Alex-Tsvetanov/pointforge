@@ -157,7 +157,7 @@ PF_TEST(icp, an_initial_guess_is_used) {
     PF_CHECK_NEAR(error_against(warm.transform, truth).angle_rad, 0.0, 2e-2);
 }
 
-PF_TEST(icp, both_query_paths_give_the_same_registration) {
+PF_TEST(icp, all_query_paths_give_the_same_registration) {
     const PointCloud target = make_scene(SceneOptions{2000, 1200, 1200});
     const RigidTransform truth = known_transform(0.18, 0.22F, -0.16F, 0.10F);
     const PointCloud source = transform_cloud(target, truth.inverse());
@@ -167,13 +167,19 @@ PF_TEST(icp, both_query_paths_give_the_same_registration) {
     scalar_options.max_correspondence_distance = 0.8F;
     IcpOptions batched_options = scalar_options;
     batched_options.path = NnPath::Batched;
+    IcpOptions simd_options = scalar_options;
+    simd_options.path = NnPath::Simd;
 
     const IcpResult scalar = icp_point_to_point(source, target, scalar_options);
     const IcpResult batched = icp_point_to_point(source, target, batched_options);
+    const IcpResult simd = icp_point_to_point(source, target, simd_options);
 
     PF_CHECK_EQ(scalar.iterations, batched.iterations);
+    PF_CHECK_EQ(scalar.iterations, simd.iterations);
     PF_CHECK_NEAR(scalar.rmse, batched.rmse, 1e-9);
+    PF_CHECK_NEAR(scalar.rmse, simd.rmse, 1e-9);
     PF_CHECK_NEAR(error_against(scalar.transform, batched.transform).angle_rad, 0.0, 1e-9);
+    PF_CHECK_NEAR(error_against(scalar.transform, simd.transform).angle_rad, 0.0, 1e-9);
 }
 
 PF_TEST(icp, empty_input_returns_the_initial_guess) {
